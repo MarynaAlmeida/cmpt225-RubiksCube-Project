@@ -337,5 +337,6 @@ public class RubiksCube implements Comparator<RubiksCube>{
         RubiksCube cube = new RubiksCube("testcases/scramble01.txt");
         cube.aStarAlgorithm();
     }
+    // hi this is me testing github
 
 }
