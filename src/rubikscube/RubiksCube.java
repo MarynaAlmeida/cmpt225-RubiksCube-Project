@@ -262,74 +262,43 @@ public class RubiksCube implements Comparator<RubiksCube>{
     }
 
     public void aStarAlgorithm() {
-        g = 0;
-        f = 0;
+        this.h = this.heuristic();
+        this.g = 0;
+        this.f = this.g + this.h;
+        int moveCost = 1;
         PriorityQueue<RubiksCube> discoveredStates = new PriorityQueue<>(this);
         HashMap<RubiksCube, String> visitedStates = new HashMap<>();
         discoveredStates.add(this);
         //while (!discoveredStates.isEmpty()) {
             RubiksCube currentState = discoveredStates.poll();
             visitedStates.put(currentState, "visited");
+
             for(int i = 1; i <= 6; i++) {
-                if(i == 1) {
-                    h = 0;
-                    child = currentState.clone();
-                    child.F();
-                    h = child.heuristic();
-                    child.f = h + g;
-                    discoveredStates.add(child);
+                child = currentState.clone();
 
+                switch (i) {
+                    case 1: child.F(); break;   // Front
+                    case 2: child.B(); break;   // Back
+                    case 3: child.L(); break;   // Left
+                    case 4: child.R(); break;   // Right
+                    case 5: child.U(); break;   // Up
+                    case 6: child.D(); break;   // Down
                 }
-                else if(i == 2) {
-                    h = 0;
-                    child = currentState.clone();
-                    child.B();
-                    h = child.heuristic();
-                    child.f = h + g;
-                    discoveredStates.add(child);
 
-                }
-                else if(i == 3) {
-                    h = 0;
-                    child = currentState.clone();
-                    child.L();
-                    h = child.heuristic();
-                    child.f = h + g;
-                    discoveredStates.add(child);
-
-                }
-                else if(i == 4) {
-                    h = 0;
-                    child = currentState.clone();
-                    child.R();
-                    h = child.heuristic();
-                    child.f = h + g;
-                    discoveredStates.add(child);
-
-                }
-                else if(i == 5) {
-                    h = 0;
-                    child = currentState.clone();
-                    child.U();
-                    h = child.heuristic();
-                    child.f = h + g;
-                    discoveredStates.add(child);
-
-                }
-                else{
-                    h = 0;
-                    child = currentState.clone();
-                    child.D();
-                    h = child.heuristic();
-                    child.f = h + g;
-                    discoveredStates.add(child);
-
-                }
+                // update resulting child info
+                child.h = child.heuristic();
+                child.g = currentState.g + moveCost;
+                child.f = child.g + child.h;
+                discoveredStates.add(child);
             }
-            //checking if priority queue works correctly
+            // checking if priority queue works correctly
             for(int i = 1; i <= 6; i++){
                 System.out.println(discoveredStates.poll().f);
             }
+
+            // check if we have reached a solved state
+            // if (currentState.isSolved()){
+                //return, break out of while loop
        // }
     }
 
@@ -337,6 +306,5 @@ public class RubiksCube implements Comparator<RubiksCube>{
         RubiksCube cube = new RubiksCube("testcases/scramble01.txt");
         cube.aStarAlgorithm();
     }
-    // hi this is me testing github
 
 }
