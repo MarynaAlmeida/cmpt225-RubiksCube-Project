@@ -261,19 +261,52 @@ public class RubiksCube implements Comparator<RubiksCube>{
         return f1Compare.compareTo(f2Compare);
     }
 
-    public void aStarAlgorithm() {
+    public char[] aStarAlgorithm() {
         this.h = this.heuristic();
         this.g = 0;
         this.f = this.g + this.h;
         int moveCost = 1;
-        PriorityQueue<RubiksCube> discoveredStates = new PriorityQueue<>(this);
-        HashMap<RubiksCube, String> visitedStates = new HashMap<>();
-        discoveredStates.add(this);
-        //while (!discoveredStates.isEmpty()) {
-            RubiksCube currentState = discoveredStates.poll();
-            visitedStates.put(currentState, "visited");
 
-            for(int i = 1; i <= 6; i++) {
+        PriorityQueue<RubiksCube> discoveredStates = new PriorityQueue<>(this);  // open set
+        HashSet<RubiksCube> visitedStates = new HashSet<>();                               // closed set
+        HashMap<RubiksCube, RubiksCube> parent = new HashMap<>();                          // to retrace our steps
+        HashMap<RubiksCube, Integer> movesUsed = new HashMap<>();
+        HashMap<RubiksCube, Integer> bestG = new HashMap<>();
+        ArrayList<Integer> path = new ArrayList<>();
+        bestG.put(this, 0);
+        discoveredStates.add(this);
+
+        while (!discoveredStates.isEmpty()) {
+            RubiksCube currentState = discoveredStates.poll();
+            // check if we have visited current state before
+            if (visitedStates.contains(currentState)) {
+                continue;
+            }
+            visitedStates.add(currentState);
+
+            // path has been found, retrace steps and return
+            if (currentState.isSolved()) {
+                while (parent.get(currentState) != null) {
+                    path.add(movesUsed.get(currentState));
+                    currentState = parent.get(currentState);
+                }
+                Collections.reverse(path);
+                char[] pathChars = new char[path.size()];   // rewrite our path into array of char form
+                for (int i = 0; i < pathChars.length; i++) {
+                    int moveCode = path.get(i);
+                    switch (moveCode) {
+                        case 1: pathChars[i] = 'F'; break;
+                        case 2: pathChars[i] = 'B'; break;
+                        case 3: pathChars[i] = 'L'; break;
+                        case 4: pathChars[i] = 'R'; break;
+                        case 5: pathChars[i] = 'U'; break;
+                        case 6: pathChars[i] = 'D'; break;
+                    }
+                }
+            return pathChars;
+            }
+
+            for (int i = 1; i <= 6; i++) {
                 child = currentState.clone();
 
                 switch (i) {
@@ -289,22 +322,32 @@ public class RubiksCube implements Comparator<RubiksCube>{
                 child.h = child.heuristic();
                 child.g = currentState.g + moveCost;
                 child.f = child.g + child.h;
-                discoveredStates.add(child);
+
+                // if we have visited path before, skip it
+                if (visitedStates.contains(child)) {
+                    continue;
+                }
+
+                if (!bestG.containsKey(child) || child.g < bestG.get(child)){
+                    child.g = currentState.g + moveCost;
+                    child.h = child.heuristic();
+                    child.f = child.g + child.h;
+                    bestG.put(child, child.g);
+                    parent.put(child, currentState);
+                    movesUsed.put(child, i);
+                    discoveredStates.add(child);
+                }
+
             }
-            // checking if priority queue works correctly
-            for(int i = 1; i <= 6; i++){
-                System.out.println(discoveredStates.poll().f);
             }
 
-            // check if we have reached a solved state
-            // if (currentState.isSolved()){
-                //return, break out of while loop
-       // }
+        return null;
     }
 
     public static void main(String[] args)  throws FileNotFoundException{
-        RubiksCube cube = new RubiksCube("testcases/scramble01.txt");
-        cube.aStarAlgorithm();
+        RubiksCube cube = new RubiksCube("testcases/scramble04.txt");
+        char[] solution = cube.aStarAlgorithm();
+        System.out.println(solution);
     }
 
 }
