@@ -209,32 +209,56 @@ public class RubiksCube implements Comparator<RubiksCube>{
         return sb.toString();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof RubiksCube)) return false;
+        RubiksCube other = (RubiksCube) o;
+
+        for (int r = 0; r < currentState.length; r++) {
+            if (!Arrays.equals(this.currentState[r], other.currentState[r])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = 1;
+        for (int r = 0; r < currentState.length; r++) {
+            result = 31 * result + Arrays.hashCode(currentState[r]);
+        }
+        return result;
+    }
+
     // heuristic calculates how many unmatched cubes from the target cube
-    public int heuristic(){
-        RubiksCube target = new RubiksCube();
+    public int heuristic(RubiksCube target) {
         int unmatched = 0;
         int c, r;
-        for(r = 0; r <= 2; r++){
-            for(c = 0; c <= 5; c++){
-                if(this.currentState[r][c] != target.currentState[r][c]){
+
+        for (r = 0; r <= 2; r++) {
+            for (c = 0; c <= 5; c++) {
+                if (this.currentState[r][c] != target.currentState[r][c]) {
                     unmatched++;
                 }
             }
         }
-        for( r = 3; r <= 5; r++){
-            for( c = 0; c <= 11; c++){
-                if(this.currentState[r][c] != target.currentState[r][c]){
+        for (r = 3; r <= 5; r++) {
+            for (c = 0; c <= 11; c++) {
+                if (this.currentState[r][c] != target.currentState[r][c]) {
                     unmatched++;
                 }
             }
         }
-        for( r = 6; r <= 8; r++){
-            for( c = 0; c <= 5; c++){
-                if(this.currentState[r][c] != target.currentState[r][c]){
+        for (r = 6; r <= 8; r++) {
+            for (c = 0; c <= 5; c++) {
+                if (this.currentState[r][c] != target.currentState[r][c]) {
                     unmatched++;
                 }
             }
         }
+
         return unmatched;
     }
 
@@ -262,92 +286,215 @@ public class RubiksCube implements Comparator<RubiksCube>{
     }
 
     public char[] aStarAlgorithm() {
-        this.h = this.heuristic();
+        RubiksCube meetState = null;
+        RubiksCube start = this.clone();
+        RubiksCube solved = new RubiksCube();
+
+        // forward search initialization
+        this.h = this.heuristic(solved);
         this.g = 0;
         this.f = this.g + this.h;
         int moveCost = 1;
 
-        PriorityQueue<RubiksCube> discoveredStates = new PriorityQueue<>(this);  // open set
-        HashSet<RubiksCube> visitedStates = new HashSet<>();                               // closed set
-        HashMap<RubiksCube, RubiksCube> parent = new HashMap<>();                          // to retrace our steps
+        PriorityQueue<RubiksCube> discoveredStates = new PriorityQueue<>(this);      // open set
+        HashSet<RubiksCube> visitedStates = new HashSet<>();                                   // closed set
+        HashMap<RubiksCube, RubiksCube> parent = new HashMap<>();                              // to retrace our steps
         HashMap<RubiksCube, Integer> movesUsed = new HashMap<>();
         HashMap<RubiksCube, Integer> bestG = new HashMap<>();
-        ArrayList<Integer> path = new ArrayList<>();
         bestG.put(this, 0);
         discoveredStates.add(this);
 
-        while (!discoveredStates.isEmpty()) {
-            RubiksCube currentState = discoveredStates.poll();
-            // check if we have visited current state before
-            if (visitedStates.contains(currentState)) {
-                continue;
-            }
-            visitedStates.add(currentState);
+        // backward search initialization
+        solved.g = 0;
+        solved.h = solved.heuristic(start);
+        solved.f = solved.g + solved.h;
 
-            // path has been found, retrace steps and return
-            if (currentState.isSolved()) {
-                while (parent.get(currentState) != null) {
-                    path.add(movesUsed.get(currentState));
-                    currentState = parent.get(currentState);
+        PriorityQueue<RubiksCube> discoveredStates2 = new PriorityQueue<>(this);      // open set
+        HashSet<RubiksCube> visitedStates2 = new HashSet<>();                                   // closed set
+        HashMap<RubiksCube, RubiksCube> parent2 = new HashMap<>();                              // to retrace our steps
+        HashMap<RubiksCube, Integer> movesUsed2 = new HashMap<>();
+        HashMap<RubiksCube, Integer> bestG2 = new HashMap<>();
+        bestG2.put(solved, 0);
+        discoveredStates2.add(solved);
+        parent2.put(solved, null);
+
+        // search loop
+        while (!discoveredStates.isEmpty() && !discoveredStates2.isEmpty()) {
+
+            // going forwards
+            RubiksCube currentState = discoveredStates.poll();
+            if (currentState != null && !visitedStates.contains(currentState)) {
+                visitedStates.add(currentState);
+
+                // check if we found a common state (meeting point)
+                if (visitedStates2.contains(currentState)) {
+                    meetState = currentState;
+                    return printPath(meetState, parent, movesUsed, parent2, movesUsed2);
                 }
-                Collections.reverse(path);
-                char[] pathChars = new char[path.size()];   // rewrite our path into array of char form
-                for (int i = 0; i < pathChars.length; i++) {
-                    int moveCode = path.get(i);
-                    switch (moveCode) {
-                        case 1: pathChars[i] = 'F'; break;
-                        case 2: pathChars[i] = 'B'; break;
-                        case 3: pathChars[i] = 'L'; break;
-                        case 4: pathChars[i] = 'R'; break;
-                        case 5: pathChars[i] = 'U'; break;
-                        case 6: pathChars[i] = 'D'; break;
+
+                // making move forward
+                for (int i = 1; i <= 6; i++) {
+                    child = currentState.clone();
+
+                    switch (i) {
+                        case 1: child.F(); break;   // Front
+                        case 2: child.B(); break;   // Back
+                        case 3: child.L(); break;   // Left
+                        case 4: child.R(); break;   // Right
+                        case 5: child.U(); break;   // Up
+                        case 6: child.D(); break;   // Down
+                    }
+
+                    // update resulting child info
+                    child.h = child.heuristic(solved);
+                    child.g = currentState.g + moveCost;
+                    child.f = child.g + child.h;
+
+                    // if we have visited path before, skip it
+                    if (visitedStates.contains(child)) {
+                        continue;
+                    }
+
+                    if (!bestG.containsKey(child) || child.g < bestG.get(child)) {
+                        child.g = currentState.g + moveCost;
+                        child.h = child.heuristic(solved);
+                        child.f = child.g + child.h;
+                        bestG.put(child, child.g);
+                        parent.put(child, currentState);
+                        movesUsed.put(child, i);
+                        discoveredStates.add(child);
+
                     }
                 }
-            return pathChars;
             }
 
-            for (int i = 1; i <= 6; i++) {
-                child = currentState.clone();
+            // going backwards
+            RubiksCube currentState2 = discoveredStates2.poll();
+            if (currentState2 != null && !visitedStates2.contains(currentState2)) {
+                visitedStates2.add(currentState2);
 
-                switch (i) {
-                    case 1: child.F(); break;   // Front
-                    case 2: child.B(); break;   // Back
-                    case 3: child.L(); break;   // Left
-                    case 4: child.R(); break;   // Right
-                    case 5: child.U(); break;   // Up
-                    case 6: child.D(); break;   // Down
+                // check if we found a common state (meeting point)
+                if (visitedStates.contains(currentState2)) {
+                    meetState = currentState2;
+                    return printPath(meetState, parent, movesUsed, parent2, movesUsed2);
                 }
 
-                // update resulting child info
-                child.h = child.heuristic();
-                child.g = currentState.g + moveCost;
-                child.f = child.g + child.h;
+                    // making move forward
+                for (int i = 1; i <= 6; i++) {
+                    child = currentState2.clone();
 
-                // if we have visited path before, skip it
-                if (visitedStates.contains(child)) {
-                    continue;
-                }
+                    switch (i) {
+                        case 1: child.F(); break;   // Front
+                        case 2: child.B(); break;   // Back
+                        case 3: child.L(); break;   // Left
+                        case 4: child.R(); break;   // Right
+                        case 5: child.U(); break;   // Up
+                        case 6: child.D(); break;   // Down
+                    }
 
-                if (!bestG.containsKey(child) || child.g < bestG.get(child)){
-                    child.g = currentState.g + moveCost;
-                    child.h = child.heuristic();
+                    // update resulting child info
+                    child.h = child.heuristic(start);
+                    child.g = currentState2.g + moveCost;
                     child.f = child.g + child.h;
-                    bestG.put(child, child.g);
-                    parent.put(child, currentState);
-                    movesUsed.put(child, i);
-                    discoveredStates.add(child);
+
+                    // if we have visited path before, skip it
+                    if (visitedStates2.contains(child)) {
+                        continue;
+                    }
+
+                    if (!bestG2.containsKey(child) || child.g < bestG2.get(child)) {
+                        child.g = currentState2.g + moveCost;
+                        child.h = child.heuristic(start);
+                        child.f = child.g + child.h;
+                        bestG2.put(child, child.g);
+                        parent2.put(child, currentState2);
+                        movesUsed2.put(child, i);
+                        discoveredStates2.add(child);
+
+                    }
                 }
-
             }
-            }
-
+        }
         return null;
     }
 
-    public static void main(String[] args)  throws FileNotFoundException{
-        RubiksCube cube = new RubiksCube("testcases/scramble04.txt");
-        char[] solution = cube.aStarAlgorithm();
-        System.out.println(solution);
+    // translating code move into a character
+    private char moveCodeToChar(int moveCode) {
+        switch (moveCode) {
+            case 1: return 'F';
+            case 2: return 'B';
+            case 3: return 'L';
+            case 4: return 'R';
+            case 5: return 'U';
+            case 6: return 'D';
+        }
+        return '?'; // safety default
     }
+
+    // reconstructs path bidirectionally
+    private char[] printPath(
+            RubiksCube meetState,
+            HashMap<RubiksCube, RubiksCube> parent,
+            HashMap<RubiksCube, Integer> movesUsed,
+            HashMap<RubiksCube, RubiksCube> parent2,
+            HashMap<RubiksCube, Integer> movesUsed2
+    ) {
+
+        // forward half
+        ArrayList<Integer> path = new ArrayList<>();
+        RubiksCube currentState = meetState;
+
+        while (parent.get(currentState) != null) {
+            path.add(movesUsed.get(currentState));
+            currentState = parent.get(currentState);
+        }
+
+        Collections.reverse(path);
+
+        char[] pathChars = new char[path.size()];
+        for (int i = 0; i < pathChars.length; i++) {
+            pathChars[i] = moveCodeToChar(path.get(i));
+        }
+
+
+        // backward half:
+        ArrayList<Integer> path2 = new ArrayList<>();
+        RubiksCube currentState2 = meetState;
+
+        while (parent2.get(currentState2) != null) {
+            path2.add(movesUsed2.get(currentState2));
+            currentState2 = parent2.get(currentState2);
+        }
+
+        // backward retrace gives solved -> meet, so reverse to get meet -> solved
+        Collections.reverse(path2);
+
+        char[] pathChars2 = new char[path2.size()];
+        for (int i = 0; i < pathChars2.length; i++) {
+            pathChars2[i] = moveCodeToChar(path2.get(i));
+        }
+
+
+        // put both halves together
+        char[] fullPathChars = new char[pathChars.length + pathChars2.length];
+        int idx = 0;
+
+        for (int i = 0; i < pathChars.length; i++) {
+            fullPathChars[idx++] = pathChars[i];
+        }
+        for (int i = 0; i < pathChars2.length; i++) {
+            fullPathChars[idx++] = pathChars2[i];
+        }
+
+        System.out.println(fullPathChars);
+        return fullPathChars;
+    }
+
+    public static void main(String[] args) throws FileNotFoundException{
+        RubiksCube cube = new RubiksCube("testcases/scramble03.txt");
+        char[] solution = cube.aStarAlgorithm();
+    }
+
+
 
 }
