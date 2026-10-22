@@ -1,6 +1,7 @@
 # Rubiks Cube Solver - CMPT225
 
 A Java application developed for the Data Structures and Programming (CMPT225) class that calculates solution paths for scrambled Rubik's Cubes in under 10 seconds using the **Bidirectional A\*** search algorithm.
+*(Note: Developed as part of a collaborative team project at SFU)*
 
 ## Overview
 The solver computes and outputs a sequence of face movements to unscramble the cube.
